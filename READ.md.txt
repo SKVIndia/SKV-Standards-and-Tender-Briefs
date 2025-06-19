@@ -1,0 +1,19 @@
+# SKV Standards and Tender Brief Comparator
+
+A Streamlit-based AI tool that compares SKV's fixed legal standards with client tender documents using semantic matching powered by Sentence-BERT (SBERT).
+
+## 🔍 Features
+
+- Clause-by-clause semantic comparison
+- Match, clarification, and conflict inference
+- Extra tender fields identified separately
+- Color-coded results in app and downloadable Excel
+- Made with ❤️ by [adityxrai](https://adityxrai.vercel.app)
+
+## 🚀 How to Run Locally
+
+```bash
+git clone https://github.com/your-username/skv-tender-comparator.git
+cd skv-tender-comparator
+pip install -r requirements.txt
+streamlit run app.py
