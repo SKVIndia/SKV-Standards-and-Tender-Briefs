@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 from sentence_transformers import SentenceTransformer, util
 from io import BytesIO
-from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font
 
 # Title and Intro
@@ -28,10 +27,12 @@ if skv_file and tender_file:
         skv_df = pd.read_excel(skv_file)
         tender_df = pd.read_excel(tender_file)
 
-        # Extract relevant data
+        # Extract SKV clauses
         skv_clauses = skv_df[['Clauses', 'SKV Standard']].dropna()
-        tender_brief = tender_df.iloc[1:, [1, 2]]
-        tender_brief.columns = ['Tender Brief', 'Value']
+
+        # Tender brief with Doc Name and Page Number
+        tender_brief = tender_df.iloc[1:, [1, 2, 3]]
+        tender_brief.columns = ['Tender Brief', 'Value', 'Doc Name and Page Number']
         tender_brief = tender_brief.dropna()
 
         # Load SBERT model
@@ -53,21 +54,19 @@ if skv_file and tender_file:
 
             if score > 0.85:
                 inference = "✅ Match"
-                color = "background-color: #d4edda; color: black;"  # green
-                fill_color = "C6EFCE"
+                fill_color = "C6EFCE"  # green
             elif 0.6 < score <= 0.85:
                 inference = "🟡 Needs Clarification"
-                color = "background-color: #fff3cd; color: black;"  # yellow
-                fill_color = "FFF2CC"
+                fill_color = "FFF2CC"  # yellow
             else:
                 inference = "❌ Conflict or Not Found"
-                color = "background-color: #f8d7da; color: black;"  # red
-                fill_color = "F4CCCC"
+                fill_color = "F4CCCC"  # red
 
             results.append({
                 "SKV Standards": f"{skv_clause['Clauses']}: {skv_clause['SKV Standard']}",
                 "Tender Brief": f"{tender_row['Tender Brief']}: {tender_row['Value']}",
                 "Inference": inference,
+                "Doc Name and Page Number": tender_row['Doc Name and Page Number'],
                 "Fill Color": fill_color
             })
 
@@ -81,12 +80,13 @@ if skv_file and tender_file:
                 extra_rows.append({
                     "Tender Brief Extra Field": row['Tender Brief'],
                     "Value": row['Value'],
+                    "Doc Name and Page Number": row['Doc Name and Page Number'],
                     "Comment": "Not part of SKV Standards"
                 })
 
         extra_df = pd.DataFrame(extra_rows)
 
-        # Display tables with color formatting
+        # Display tables
         def highlight_rows(row):
             color = fill_colors[row.name]
             css = f'background-color: #{color}; color: black;'
@@ -103,21 +103,19 @@ if skv_file and tender_file:
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             comparison_df.to_excel(writer, index=False, sheet_name="SKV vs Tender")
             extra_df.to_excel(writer, index=False, sheet_name="Extra Tender Fields")
-            wb = writer.book
 
-            # Color inference column in 'SKV vs Tender'
-            ws = wb["SKV vs Tender"]
+            wb = writer.book
+            ws = writer.sheets["SKV vs Tender"]
             for i, row in enumerate(ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=3, max_col=3)):
                 color = fill_colors.iloc[i]
                 fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
                 for cell in row:
                     cell.fill = fill
-                    cell.font = Font(color="000000")  # black font
+                    cell.font = Font(color="000000")
 
-            # Color Extra Tender sheet
-            ws_extra = wb["Extra Tender Fields"]
+            ws_extra = writer.sheets["Extra Tender Fields"]
             yellow_fill = PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="solid")
-            for row in ws_extra.iter_rows(min_row=2, max_row=ws_extra.max_row, min_col=1, max_col=3):
+            for row in ws_extra.iter_rows(min_row=2, max_row=ws_extra.max_row, min_col=1, max_col=4):
                 for cell in row:
                     cell.fill = yellow_fill
                     cell.font = Font(color="000000")
